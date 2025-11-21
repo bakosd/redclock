@@ -32,7 +32,7 @@ for (const project of projects) {
         const hours = report.timeInterval.duration / 3600;
         const spentOn = formatForRedmine(report.timeInterval.start);
         console.log(`Issue: #${issueId}, Activity: ${activityId}, User: ${user.id}, Hours: ${hours}, Date: ${spentOn}`);
-        const result = await createTimeEntry(user.id, issueId, activityId, spentOn, hours, report.description);
+        const result = await createTimeEntry(user.id, issueId, activityId, spentOn, hours, `${report.description} - ${report._id}`);
         console.log(result)
         if (!result) continue;
         console.log(`Created time entry '${report.description}' for ${user.userName}`);
