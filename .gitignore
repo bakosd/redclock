@@ -1,0 +1,7 @@
+.idea
+.code
+.vscode
+.env
+node_modules
+data
+config/default.json
