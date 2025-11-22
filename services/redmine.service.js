@@ -205,3 +205,7 @@ export async function deleteTimeEntry(data) {
         message: res.status === 204 ? `Time entry deleted successfully!` : `Failed to delete time entry: ${res.statusText}`
     };
 }
+
+export async function updateTimeEntry(data) {
+    return {statusCode: 200, status: 'success', message: "Not implemented yet"};
+}
