@@ -147,5 +147,9 @@ export async function createTimeEntry(data) {
         status: 'error',
         message: `Failed to create time entry: ${res.statusText}`
     };
-    return 201;
+    return {
+        statusCode: 201,
+        status: 'success',
+        message: `Time entry created successfully!`
+    };
 }
