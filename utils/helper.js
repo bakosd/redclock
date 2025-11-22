@@ -1,12 +1,16 @@
 import { writeFile, readFile, mkdir } from "fs/promises";
 import { dirname } from "path";
+import { DateTime } from 'luxon';
+
+const TIMEZONE = process.env.TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export const saveLastExecution = async (date = new Date()) => {
     const filePath = process.env.EXECUTION_DATE_PATH;
     try {
         await mkdir(dirname(filePath), { recursive: true });
 
-        await writeFile(filePath, date.toISOString(), "utf-8");
+        const formattedDate = DateTime.fromJSDate(date).setZone(TIMEZONE);
+        await writeFile(filePath, formattedDate.toUTC().toISO({ suppressMilliseconds: false }), "utf-8");
     } catch (err) {
         console.error("Failed to save last execution:", err);
         throw err;
@@ -17,7 +21,7 @@ export const readLastExecution = async () => {
     const filePath = process.env.EXECUTION_DATE_PATH;
     try {
         const text = await readFile(filePath, "utf-8");
-        return new Date(text).toISOString();
+        return DateTime.fromISO(text).setZone(TIMEZONE).toUTC().toISO({ suppressMilliseconds: false });
     } catch (err) {
         if (err.code === "ENOENT") return null;
         console.error("Failed to read last execution:", err);
@@ -26,11 +30,11 @@ export const readLastExecution = async () => {
 }
 
 export const getDate = (startOfDay = false) => {
-    let now = new Date();
+    let now = DateTime.now().setZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
     if (startOfDay) {
-        now = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0));
+        now = now.startOf('day');
     }
-    return now.toISOString();
+    return now.toUTC().toISO({ suppressMilliseconds: false });
 };
 
 export const formatForRedmine = (date) => {
