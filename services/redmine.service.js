@@ -191,13 +191,17 @@ export async function deleteTimeEntry(data) {
         return {statusCode: 404, status: 'error', message: "Time entry does not exists."}
     }
 
-    const res = await fetch(`${process.env.REDMINE_API}/time_entries.json/${timeEntry.id}`, {
+    const res = await fetch(`${process.env.REDMINE_API}/time_entries/${timeEntry.id}.json`, {
         method: "DELETE",
         headers: {
             "X-Redmine-API-Key": process.env.REDMINE_API_KEY,
             "Content-Type": "application/json"
         }
     });
-    console.log(`Time entry delete result: ${res.statusText}`);
-    return {statusCode: res.status, status: 'success', message: `Time entry deleted successfully!`};
+    console.log(`Time entry delete result: ${res.status === 204 ? 'OK' : res.statusText}`);
+    return {
+        statusCode: res.status,
+        status: res.status === 204 ? 'success' : 'error',
+        message: res.status === 204 ? `Time entry deleted successfully!` : `Failed to delete time entry: ${res.statusText}`
+    };
 }
