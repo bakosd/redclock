@@ -1,4 +1,4 @@
-import {findUser, formatForRedmine, initTrackerRegex, parseIssueId} from "../utils/helper.js";
+import {findUser, formatForRedmine, parseDuration, initTrackerRegex, parseIssueId} from "../utils/helper";
 import config from "config";
 
 export async function fetchUsers(projectName) {
@@ -86,7 +86,7 @@ export async function createTimeEntry(data) {
         console.log(`Project not found! Skipping...`);
         return {statusCode: 406, status: 'error', message: "Project not found"};
     }
-    const users = this.fetchUsers(redmineProjectId);
+    const users = await this.fetchUsers(redmineProjectId);
     const user = findUser(users, data.user.name, data.user.email);
     if (!user) {
         console.log(`User not found! Skipping...`);
@@ -107,7 +107,7 @@ export async function createTimeEntry(data) {
     const tag = data.tags[0].name ?? '';
     const activityId = activityIds[tag];
 
-    const timeSpent = data.timeInterval.duration / 3600;
+    const timeSpent = parseDuration(data.timeInterval.duration);
     const spentOn = formatForRedmine(data.timeInterval.start);
 
     console.log(`Attempting to create time entry...\n- Issue: #${issueId}, Activity: ${tag} [${activityId}], User: ${user.userName} [${user.id}], Hours: ${timeSpent}, Date: ${spentOn}`);

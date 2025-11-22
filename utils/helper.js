@@ -1,8 +1,16 @@
+const {Duration} = require("luxon");
+
 const formatForRedmine = (date) => {
     const d = new Date(date);
     if (isNaN(d)) throw new Error(`Invalid date passed to formatForRedmine: ${date}`);
     return d.toISOString().split("T")[0];
 };
+
+function parseDuration(isoDuration) {
+    if (!isoDuration) return 0;
+    const dur = Duration.fromISO(isoDuration);
+    return Number(dur.as("hours").toFixed(2));
+}
 
 const initTrackerRegex = async (trackers) => {
     const escaped = trackers
@@ -21,4 +29,4 @@ const parseIssueId = (description, regex) => {
 const findUser = (users, userName, userEmail) =>
     users.find(u => (u.userName === userName || u.userEmail === userEmail));
 
-module.exports = {formatForRedmine, initTrackerRegex, parseIssueId, findUser};
+module.exports = {formatForRedmine, parseDuration, initTrackerRegex, parseIssueId, findUser};
