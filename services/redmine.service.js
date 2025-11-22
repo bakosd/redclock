@@ -82,10 +82,16 @@ function findProjectByClockifyId(clockifyId) {
 
 export async function createTimeEntry(data) {
     const redmineProjectId = findProjectByClockifyId(data.projectId);
-    if (!redmineProjectId) return {statusCode: 406, status: 'error', message: "Project not found"};
+    if (!redmineProjectId) {
+        console.log(`Project not found! Skipping...`);
+        return {statusCode: 406, status: 'error', message: "Project not found"};
+    }
     const users = this.fetchUsers(redmineProjectId);
     const user = findUser(users, data.user.name, data.user.email);
-    if (!user) return {statusCode: 404, status: 'error', message: "User not found"};
+    if (!user) {
+        console.log(`User not found! Skipping...`);
+        return {statusCode: 404, status: 'error', message: "User not found"};
+    }
 
     if (await fetchTimeEntryBasedOnId(redmineProjectId, data.id)) {
         console.log(`Time entry already exists! Skipping...`);
@@ -135,6 +141,7 @@ export async function createTimeEntry(data) {
             })
         }
     );
+    console.log(`Time entry create result: ${res.statusText}`);
     if (res.status !== 201) return {
         statusCode: 500,
         status: 'error',
