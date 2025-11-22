@@ -11,7 +11,7 @@ export const saveLastExecution = async (date = new Date()) => {
 
         const localTime = DateTime.fromJSDate(date).setZone(TIMEZONE);
         await writeFile(
-            filePath, localTime.toUTC().plus({minutes: localTime.offset})
+            filePath, localTime.toUTC().plus({minutes: localTime.offset}).minus({ minutes: 1 })
                 .toISO({suppressMilliseconds: false}
                 ), "utf-8");
     } catch (err) {
