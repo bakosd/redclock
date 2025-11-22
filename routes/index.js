@@ -4,5 +4,6 @@ const validateClockifySignature = require("../middlewares/signature.middleware")
 const router = express.Router();
 
 router.post("/create", validateClockifySignature(process.env.CLOCKIFY_CREATE_WEBHOOK_SECRET), clockifyController.createTimeEntry);
+router.post("/delete", validateClockifySignature(process.env.CLOCKIFY_DELETE_WEBHOOK_SECRET), clockifyController.deleteTimeEntry);
 
 module.exports = router;

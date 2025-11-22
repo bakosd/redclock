@@ -80,23 +80,49 @@ function findProjectByClockifyId(clockifyId) {
     return projects.find(p => p.clockifyProjectId === clockifyId)?.redmineIdentifier || null;
 }
 
+async function searchForTimeEntry({projectId, userName, userEmail, entryId}) {
+    const redmineProject = findProjectByClockifyId(projectId);
+    let user = null;
+    let timeEntry = null;
+
+    if (!redmineProject) {
+        console.log(`Project not found! Skipping...`);
+        return {redmineProject, user, timeEntry};
+    }
+
+    const users = await this.fetchUsers(redmineProject);
+    user = findUser(users, userName, userEmail);
+    if (!user) {
+        console.log(`User not found! Skipping...`);
+        return {redmineProject, user, timeEntry};
+    }
+
+    timeEntry = await fetchTimeEntryBasedOnId(redmineProject, entryId);
+    return {redmineProject, user, timeEntry, users};
+}
+
 export async function createTimeEntry(data) {
-    const redmineProjectId = findProjectByClockifyId(data.projectId);
-    if (!redmineProjectId) {
+    const timeEntry = searchForTimeEntry({
+        projectId: data.projectId,
+        userName: data.user.name,
+        userEmail: data.user.email,
+        entryId: data.id
+    });
+    if (!timeEntry.redmineProject) {
         console.log(`Project not found! Skipping...`);
         return {statusCode: 406, status: 'error', message: "Project not found"};
     }
-    const users = await this.fetchUsers(redmineProjectId);
-    const user = findUser(users, data.user.name, data.user.email);
-    if (!user) {
+
+    if (!timeEntry.user) {
         console.log(`User not found! Skipping...`);
         return {statusCode: 404, status: 'error', message: "User not found"};
     }
 
-    if (await fetchTimeEntryBasedOnId(redmineProjectId, data.id)) {
+    if (timeEntry.timeEntry) {
         console.log(`Time entry already exists! Skipping...`);
         return {statusCode: 409, status: 'error', message: "Time entry already exists."}
     }
+
 
     const trackers = await this.fetchTrackerNames();
     const regex = await initTrackerRegex(trackers);
@@ -110,7 +136,7 @@ export async function createTimeEntry(data) {
     const timeSpent = parseDuration(data.timeInterval.duration);
     const spentOn = formatForRedmine(data.timeInterval.start);
 
-    console.log(`Attempting to create time entry...\n- Issue: #${issueId}, Activity: ${tag} [${activityId}], User: ${user.userName} [${user.id}], Hours: ${timeSpent}, Date: ${spentOn}`);
+    console.log(`Attempting to create time entry...\n- Issue: #${issueId}, Activity: ${tag} [${activityId}], User: ${timeEntry.user.userName} [${timeEntry.user.id}], Hours: ${timeSpent}, Date: ${spentOn}`);
     const res = await fetch(
         `${process.env.REDMINE_API}time_entries.json`,
         {
@@ -121,7 +147,7 @@ export async function createTimeEntry(data) {
             },
             body: JSON.stringify({
                 time_entry: {
-                    user_id: user.id,
+                    user_id: timeEntry.user.id,
                     issue_id: issueId,
                     activity_id: activityId,
                     spent_on: spentOn,
@@ -134,7 +160,7 @@ export async function createTimeEntry(data) {
                         },
                         {
                             id: Number(process.env.REDMINE_TIME_ENTRY_ISSUER_FIELD_IDENTIFIER),
-                            value: user.userEmail
+                            value: timeEntry.user.userEmail
                         }
                     ]
                 }
@@ -152,4 +178,37 @@ export async function createTimeEntry(data) {
         status: 'success',
         message: `Time entry created successfully!`
     };
+}
+
+export async function deleteTimeEntry(data) {
+    const timeEntry = searchForTimeEntry({
+        projectId: data.projectId,
+        userName: data.user.name,
+        userEmail: data.user.email,
+        entryId: data.id
+    });
+    if (!timeEntry.redmineProject) {
+        console.log(`Project not found! Skipping...`);
+        return {statusCode: 406, status: 'error', message: "Project not found"};
+    }
+
+    if (!timeEntry.user) {
+        console.log(`User not found! Skipping...`);
+        return {statusCode: 404, status: 'error', message: "User not found"};
+    }
+
+    if (!timeEntry.timeEntry) {
+        console.log(`Time entry does not exists! Skipping...`);
+        return {statusCode: 404, status: 'error', message: "Time entry does not exists."}
+    }
+
+    const res = await fetch(`${process.env.REDMINE_API}/time_entries.json/${timeEntry.id}`, {
+        method: "DELETE",
+        headers: {
+            "X-Redmine-API-Key": process.env.REDMINE_API_KEY,
+            "Content-Type": "application/json"
+        }
+    });
+    console.log(`Time entry delete result: ${res.statusText}`);
+    return {statusCode: res.status, status: 'success', message: `Time entry deleted successfully!`};
 }
