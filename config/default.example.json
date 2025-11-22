@@ -3,6 +3,10 @@
     {
       "redmineIdentifier": "redclock",
       "clockifyProjectId": "d4a7c3e9b8f1a26d9e5c7b1f"
+    },
+    {
+      "redmineIdentifier": "redmineproj2",
+      "clockifyProjectId": "f8a9b2d3c6e5d4f1a7b2c9e0"
     }
   ]
 }
