@@ -1,4 +1,4 @@
-import {findUser, formatForRedmine, parseDuration, initTrackerRegex, parseIssueId} from "../utils/helper";
+import {findUser, formatForRedmine, parseDuration, initTrackerRegex, parseIssueId} from "../utils/helper.js";
 import config from "config";
 
 export async function fetchUsers(projectName) {
