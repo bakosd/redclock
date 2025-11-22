@@ -1,16 +1,19 @@
-import { writeFile, readFile, mkdir } from "fs/promises";
-import { dirname } from "path";
-import { DateTime } from 'luxon';
+import {writeFile, readFile, mkdir} from "fs/promises";
+import {dirname} from "path";
+import {DateTime} from 'luxon';
 
 const TIMEZONE = process.env.TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export const saveLastExecution = async (date = new Date()) => {
     const filePath = process.env.EXECUTION_DATE_PATH;
     try {
-        await mkdir(dirname(filePath), { recursive: true });
+        await mkdir(dirname(filePath), {recursive: true});
 
-        const formattedDate = DateTime.fromJSDate(date).setZone(TIMEZONE);
-        await writeFile(filePath, formattedDate.toUTC().toISO({ suppressMilliseconds: false }), "utf-8");
+        const localTime = DateTime.fromJSDate(date).setZone(TIMEZONE);
+        await writeFile(
+            filePath, localTime.toUTC().plus({minutes: localTime.offset})
+                .toISO({suppressMilliseconds: false}
+                ), "utf-8");
     } catch (err) {
         console.error("Failed to save last execution:", err);
         throw err;
@@ -21,7 +24,9 @@ export const readLastExecution = async () => {
     const filePath = process.env.EXECUTION_DATE_PATH;
     try {
         const text = await readFile(filePath, "utf-8");
-        return DateTime.fromISO(text).setZone(TIMEZONE).toUTC().toISO({ suppressMilliseconds: false });
+        const localTime = DateTime.fromISO(text).setZone(TIMEZONE);
+        return localTime.toUTC()
+            .toISO({suppressMilliseconds: false});
     } catch (err) {
         if (err.code === "ENOENT") return null;
         console.error("Failed to read last execution:", err);
@@ -34,7 +39,9 @@ export const getDate = (startOfDay = false) => {
     if (startOfDay) {
         now = now.startOf('day');
     }
-    return now.toUTC().toISO({ suppressMilliseconds: false });
+    return now.toUTC()
+        .plus({minutes: now.offset})
+        .toISO({suppressMilliseconds: false});
 };
 
 export const formatForRedmine = (date) => {
