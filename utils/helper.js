@@ -9,9 +9,9 @@ export const saveLastExecution = async (date = new Date()) => {
     try {
         await mkdir(dirname(filePath), {recursive: true});
 
-        const localTime = DateTime.fromJSDate(date).setZone(TIMEZONE);
+        const localTime = DateTime.fromJSDate(date).minus({ minutes: 1 }).setZone(TIMEZONE);
         await writeFile(
-            filePath, localTime.toUTC().plus({minutes: localTime.offset}).minus({ minutes: 1 })
+            filePath, localTime.toUTC().plus({minutes: localTime.offset})
                 .toISO({suppressMilliseconds: false}
                 ), "utf-8");
     } catch (err) {
