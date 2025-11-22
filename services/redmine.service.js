@@ -1,3 +1,6 @@
+import {findUser, formatForRedmine, initTrackerRegex, parseIssueId} from "../utils/helper.js";
+import config from "config";
+
 export async function fetchUsers(projectName) {
     console.log("Fetching users...");
     const res = await fetch(
@@ -72,8 +75,36 @@ export async function fetchTimeEntryBasedOnId(projectName, entryId) {
     return null;
 }
 
-export async function createTimeEntry(userId, issueId, activityId, spentOn, timeSpent, description, timeEntryId, timeEntryIssuer) {
-    console.log("Creating time entry...");
+function findProjectByClockifyId(clockifyId) {
+    const projects = config.get("Projects");
+    return projects.find(p => p.clockifyProjectId === clockifyId)?.redmineIdentifier || null;
+}
+
+export async function createTimeEntry(data) {
+    const redmineProjectId = findProjectByClockifyId(data.projectId);
+    if (!redmineProjectId) return {statusCode: 406, status: 'error', message: "Project not found"};
+    const users = this.fetchUsers(redmineProjectId);
+    const user = findUser(users, data.user.name, data.user.email);
+    if (!user) return {statusCode: 404, status: 'error', message: "User not found"};
+
+    if (await fetchTimeEntryBasedOnId(redmineProjectId, data.id)) {
+        console.log(`Time entry already exists! Skipping...`);
+        return {statusCode: 409, status: 'error', message: "Time entry already exists."}
+    }
+
+    const trackers = await this.fetchTrackerNames();
+    const regex = await initTrackerRegex(trackers);
+    const issueId = await parseIssueId(data.description, regex);
+    if (!issueId) return {statusCode: 404, status: 'error', message: "Issue not found"};
+
+    const activityIds = await fetchActivityIds();
+    const tag = data.tags[0].name ?? '';
+    const activityId = activityIds[tag];
+
+    const timeSpent = data.timeInterval.duration / 3600;
+    const spentOn = formatForRedmine(data.timeInterval.start);
+
+    console.log(`Attempting to create time entry...\n- Issue: #${issueId}, Activity: ${tag} [${activityId}], User: ${user.userName} [${user.id}], Hours: ${timeSpent}, Date: ${spentOn}`);
     const res = await fetch(
         `${process.env.REDMINE_API}time_entries.json`,
         {
@@ -84,26 +115,30 @@ export async function createTimeEntry(userId, issueId, activityId, spentOn, time
             },
             body: JSON.stringify({
                 time_entry: {
-                    user_id: userId,
+                    user_id: user.id,
                     issue_id: issueId,
                     activity_id: activityId,
                     spent_on: spentOn,
                     hours: timeSpent,
-                    comments: description,
+                    comments: data.description,
                     custom_fields: [
                         {
                             id: Number(process.env.REDMINE_TIME_ENTRY_ID_FIELD_IDENTIFIER),
-                            value: timeEntryId
+                            value: data.id
                         },
                         {
                             id: Number(process.env.REDMINE_TIME_ENTRY_ISSUER_FIELD_IDENTIFIER),
-                            value: timeEntryIssuer
+                            value: user.userEmail
                         }
                     ]
                 }
             })
         }
     );
-    if (res.status !== 201) throw new Error(`Failed to create time entry: ${res.statusText}`);
-    return res.status === 201;
+    if (res.status !== 201) return {
+        statusCode: 500,
+        status: 'error',
+        message: `Failed to create time entry: ${res.statusText}`
+    };
+    return 201;
 }
