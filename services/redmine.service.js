@@ -53,7 +53,7 @@ export async function fetchActivityIds() {
     );
 }
 
-export async function createTimeEntry(userId, issueId, activityId, spentOn, timeSpent, description) {
+export async function createTimeEntry(userId, issueId, activityId, spentOn, timeSpent, description, timeEntryId, timeEntryIssuer) {
     console.log("Creating time entry...");
     const res = await fetch(
         `${process.env.REDMINE_API}time_entries.json`,
@@ -70,7 +70,17 @@ export async function createTimeEntry(userId, issueId, activityId, spentOn, time
                     activity_id: activityId,
                     spent_on: spentOn,
                     hours: timeSpent,
-                    comments: description
+                    comments: description,
+                    custom_fields: [
+                        {
+                            id: Number(process.env.REDMINE_TIME_ENTRY_ID_FIELD_IDENTIFIER),
+                            value: timeEntryId
+                        },
+                        {
+                            id: Number(process.env.REDMINE_TIME_ENTRY_ISSUER_FIELD_IDENTIFIER),
+                            value: timeEntryIssuer
+                        }
+                    ]
                 }
             })
         }

@@ -19,6 +19,7 @@ const activityIds = await fetchActivityIds();
 
 
 for (const project of projects) {
+    console.log(`-----------------------------------\nProcessing ${project.redmineIdentifier} project...`)
     const users = await fetchUsers(project.redmineIdentifier);
     for (const report of reports) {
         if (report.projectId !== project.clockifyProjectId) continue;
@@ -39,7 +40,9 @@ for (const project of projects) {
             activityId,
             spentOn,
             hours,
-            `${report.description} [${tag}] - ${report._id}`
+            report.description,
+            report._id,
+            report.userEmail
         );
         if (!result) continue;
         console.log(`Created time entry '${report.description}' for ${user.userName}`);
