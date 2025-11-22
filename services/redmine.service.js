@@ -76,7 +76,5 @@ export async function createTimeEntry(userId, issueId, activityId, spentOn, time
         }
     );
     if (res.status !== 201) throw new Error(`Failed to create time entry: ${res.statusText}`);
-    const data = await res.json();
-    console.log(data);
     return res.status === 201;
 }
