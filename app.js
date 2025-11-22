@@ -1,7 +1,13 @@
 import dotenv from "dotenv";
 import config from "config";
 import {fetchClockifyReport} from "./services/clockify.service.js";
-import {createTimeEntry, fetchActivityIds, fetchTrackerNames, fetchUsers} from "./services/redmine.service.js";
+import {
+    createTimeEntry,
+    fetchActivityIds,
+    fetchTimeEntryBasedOnId,
+    fetchTrackerNames,
+    fetchUsers
+} from "./services/redmine.service.js";
 import {findUser, formatForRedmine, initTrackerRegex, parseIssueId, saveLastExecution} from "./utils/helper.js";
 
 dotenv.config();
@@ -34,6 +40,10 @@ for (const project of projects) {
         const hours = report.timeInterval.duration / 3600;
         const spentOn = formatForRedmine(report.timeInterval.start);
         console.log(`Processing time entry...\n- Issue: #${issueId}, Activity: ${tag} [${activityId}], User: ${user.userName} [${user.id}], Hours: ${hours}, Date: ${spentOn}`);
+        if (await fetchTimeEntryBasedOnId(project.redmineIdentifier, report._id)) {
+            console.log(`Time entry already exists! Skipping...`);
+            continue;
+        }
         const result = await createTimeEntry(
             user.id,
             issueId,

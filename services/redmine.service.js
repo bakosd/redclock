@@ -53,6 +53,25 @@ export async function fetchActivityIds() {
     );
 }
 
+export async function fetchTimeEntryBasedOnId(projectName, entryId) {
+    console.log("Fetching time entry...");
+    const res = await fetch(`${process.env.REDMINE_API}/time_entries.json?project_id=${projectName}`, {
+        method: "GET",
+        headers: {
+            "X-Redmine-API-Key": process.env.REDMINE_API_KEY,
+            "Content-Type": "application/json"
+        }
+    });
+    if (res.status !== 200) throw new Error(`Failed to fetch time entry: ${res.statusText}`);
+    const data = await res.json();
+    for (const entry of data.time_entries) {
+        if (entry.custom_fields.find(f => f.id === Number(process.env.REDMINE_TIME_ENTRY_ID_FIELD_IDENTIFIER))?.value === entryId) {
+            return entry;
+        }
+    }
+    return null;
+}
+
 export async function createTimeEntry(userId, issueId, activityId, spentOn, timeSpent, description, timeEntryId, timeEntryIssuer) {
     console.log("Creating time entry...");
     const res = await fetch(
