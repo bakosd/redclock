@@ -86,14 +86,12 @@ async function searchForTimeEntry({projectId, userName, userEmail, entryId}) {
     let timeEntry = null;
 
     if (!redmineProject) {
-        console.log(`Project not found! Skipping...`);
         return {redmineProject, user, timeEntry};
     }
 
-    const users = await this.fetchUsers(redmineProject);
+    const users = await fetchUsers(redmineProject);
     user = findUser(users, userName, userEmail);
     if (!user) {
-        console.log(`User not found! Skipping...`);
         return {redmineProject, user, timeEntry};
     }
 
@@ -102,7 +100,7 @@ async function searchForTimeEntry({projectId, userName, userEmail, entryId}) {
 }
 
 export async function createTimeEntry(data) {
-    const timeEntry = searchForTimeEntry({
+    const timeEntry = await searchForTimeEntry({
         projectId: data.projectId,
         userName: data.user.name,
         userEmail: data.user.email,
@@ -181,21 +179,12 @@ export async function createTimeEntry(data) {
 }
 
 export async function deleteTimeEntry(data) {
-    const timeEntry = searchForTimeEntry({
+    const timeEntry = await searchForTimeEntry({
         projectId: data.projectId,
         userName: data.user.name,
         userEmail: data.user.email,
         entryId: data.id
     });
-    if (!timeEntry.redmineProject) {
-        console.log(`Project not found! Skipping...`);
-        return {statusCode: 406, status: 'error', message: "Project not found"};
-    }
-
-    if (!timeEntry.user) {
-        console.log(`User not found! Skipping...`);
-        return {statusCode: 404, status: 'error', message: "User not found"};
-    }
 
     if (!timeEntry.timeEntry) {
         console.log(`Time entry does not exists! Skipping...`);
