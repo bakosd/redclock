@@ -1,9 +1,10 @@
 {
   "name": "redclock",
   "version": "1.0.0",
-  "main": "app.js",
-  "type": "module",
+  "main": "server.js",
   "scripts": {
+    "start": "cross-env NODE_ENV=production node server.js",
+    "dev": "cross-env NODE_ENV=development nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,6 +23,11 @@
   "dependencies": {
     "config": "^4.1.1",
     "dotenv": "^17.2.3",
+    "express": "^5.1.0",
     "luxon": "^3.7.2"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "nodemon": "^3.1.11"
   }
 }
