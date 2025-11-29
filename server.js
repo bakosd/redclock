@@ -1,8 +1,11 @@
-const express = require("express");
-const app = express();
-require("dotenv").config();
+import dotenv from "dotenv";
+dotenv.config();
 
-const router = require("./routes");
+import express from "express";
+import router from "./routes/index.js";
+import nodemailer from "nodemailer";
+
+const app = express();
 
 app.use(express.json({
     verify: (req, res, buf) => {
@@ -11,6 +14,21 @@ app.use(express.json({
 }));
 
 app.use("/clockify-webhook", router);
+
+
+export const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: Number(process.env.SMTP_PORT) === 465,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    },
+    tls: {
+        servername: process.env.SMTP_SERVER
+    }
+});
+
 
 const port = process.env.PORT || 3003;
 

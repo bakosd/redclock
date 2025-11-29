@@ -1,5 +1,14 @@
-import {findUser, formatForRedmine, initTrackerRegex, parseDuration, parseIssueId} from "../utils/helper.js";
+import {
+    findUser, formatForClockify, formatForEmail,
+    formatForRedmine,
+    getDateISO,
+    initTrackerRegex,
+    parseDuration,
+    parseIssueId
+} from "../utils/helper.js";
+import {sendEmail} from "../utils/mailer.js";
 import config from "config";
+import {fetchUserDataFromReports} from "./clockify.service.js";
 
 async function fetchUsers(projectName) {
     console.log("Fetching users...");
@@ -105,7 +114,26 @@ async function searchIssue(comment) {
     return parseIssueId(comment, regex);
 }
 
-export async function createTimeEntry(data) {
+async function sendNotification(userId, subject, data) {
+    console.log(`Sending notification to user ${userId}...`);
+    const users = await fetchUserDataFromReports(formatForClockify(data.timeInterval.start), getDateISO());
+    const user = users.find(u => u.userId === userId);
+    if (!user) {
+        console.log(`User ${userId} not found!`);
+        return;
+    }
+    console.log(`Sending notification to ${user.userEmail}...`)
+    data = {...data, userName: user.userName};
+
+    await sendEmail(
+        'notification.mjml',
+        user.userEmail,
+        subject,
+        data
+    )
+}
+
+async function createTimeEntry(data) {
     console.log(`--------------------------------\nCREATE: Attempting to create time entry...\n`);
     const timeEntry = await searchForTimeEntry({
         projectId: data.projectId,
@@ -129,7 +157,21 @@ export async function createTimeEntry(data) {
     }
 
     const issueId = await searchIssue(data.description);
-    if (!issueId) return {statusCode: 404, status: 'error', message: "Issue not found"};
+    if (!issueId) {
+        await sendNotification(data.userId, 'Invalid issue identifier was used for time entry!', {
+            ...data,
+            title: 'Dear {{userName}},',
+            message: `
+Invalid/missing issue identifier for time entry!<br />
+Issue identifier was not found in the description of the time entry, or the system was unable to identify the corresponding Redmine issue.<br /><br />
+The following time entry triggered this action: <br />
+<b>Comment:</b> <i>${data.description}</i><br /><br />
+<b>Started:</b> <i>${formatForEmail(data.timeInterval.start)}</i><br />
+<b>Finished:</b> <i>${formatForEmail(data.timeInterval.end)}</i><br /><br />
+Please check the description and try again.`
+        });
+        return {statusCode: 404, status: 'error', message: "Issue not found"};
+    }
 
     const activityIds = await fetchActivityIds();
     const tag = data.tags[0].name ?? '';
@@ -171,11 +213,24 @@ export async function createTimeEntry(data) {
     );
     console.log(`Time entry create result: ${res.statusText}`);
     console.log(`\n--------------------------------`);
-    if (res.status !== 201) return {
-        statusCode: 500,
-        status: 'error',
-        message: `Failed to create time entry: ${res.statusText}`
-    };
+    if (res.status !== 201) {
+        await sendNotification(data.userId, 'Time entry synchronization failed!', {
+            ...data,
+            title: 'Dear {{userName}},',
+            message: `
+The previously made time entry could not be synchronized with Redmine!<br /><br />
+The following time entry triggered this action: <br /><br />
+<b>Comment:</b> <i>${data.description}</i><br /><br />
+<b>Started:</b> <i>${formatForEmail(data.timeInterval.start)}</i><br />
+<b>Finished:</b> <i>${formatForEmail(data.timeInterval.end)}</i><br /><br />
+Please check the description and try again.`
+        });
+        return {
+            statusCode: 500,
+            status: 'error',
+            message: `Failed to create time entry: ${res.statusText}`
+        };
+    }
     return {
         statusCode: 201,
         status: 'success',
@@ -183,7 +238,7 @@ export async function createTimeEntry(data) {
     };
 }
 
-export async function deleteTimeEntry(data) {
+async function deleteTimeEntry(data) {
     console.log(`--------------------------------\nDELETE: Attempting to delete time entry...\n`);
     const timeEntry = await searchForTimeEntry({
         projectId: data.projectId,
@@ -213,7 +268,7 @@ export async function deleteTimeEntry(data) {
     };
 }
 
-export async function updateTimeEntry(data) {
+async function updateTimeEntry(data) {
     console.log(`--------------------------------\nUPDATE: Attempting to update time entry...\n`);
     const timeEntry = await searchForTimeEntry({
         projectId: data.projectId,
@@ -229,6 +284,18 @@ export async function updateTimeEntry(data) {
     const issueId = await searchIssue(data.description);
     if (!issueId) {
         console.log(`Time entry does not exist (edited time entry)! Skipping...`);
+        await sendNotification(data.userId, 'Invalid issue identifier was used for time entry!', {
+            ...data,
+            title: 'Dear {{userName}},',
+            message: `
+Invalid/missing issue identifier for time entry!<br />
+Issue identifier was not found in the description of the time entry, or the system was unable to identify the corresponding Redmine issue.<br /><br />
+The following time entry triggered this action: <br /><br />
+<b>Comment:</b> <i>${data.description}</i><br /><br />
+<b>Started:</b> <i>${formatForEmail(data.timeInterval.start)}</i><br />
+<b>Finished:</b> <i>${formatForEmail(data.timeInterval.end)}</i><br /><br />
+Please check the description and try again.`
+        });
         return {statusCode: 404, status: 'error', message: "Issue not found"};
     }
 
@@ -262,6 +329,19 @@ export async function updateTimeEntry(data) {
     );
 
     console.log(`Time entry update result: ${res.status === 204 ? 'OK' : res.statusText}`);
+    if (res.status !== 204) {
+        await sendNotification(data.userId, 'Time entry synchronization failed!', {
+            ...data,
+            title: 'Dear {{userName}},',
+            message: `
+The previously updated time entry could not be synchronized with Redmine!<br /><br />
+The following time entry triggered this action: <br /><br />
+<b>Comment:</b> <i>${data.description}</i><br /><br />
+<b>Started:</b> <i>${formatForEmail(data.timeInterval.start)}</i><br />
+<b>Finished:</b> <i>${formatForEmail(data.timeInterval.end)}</i><br /><br />
+Please check the description and try again.`
+        });
+    }
     console.log(`\n--------------------------------`);
     return {
         statusCode: res.status,
@@ -269,3 +349,5 @@ export async function updateTimeEntry(data) {
         message: res.status === 204 ? `Time entry was updated successfully!` : `Failed to update time entry: ${res.statusText}`
     };
 }
+
+export {createTimeEntry, deleteTimeEntry, updateTimeEntry}

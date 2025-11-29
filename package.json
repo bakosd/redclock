@@ -2,6 +2,7 @@
   "name": "redclock",
   "version": "1.0.0",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "cross-env NODE_ENV=production node server.js",
     "dev": "cross-env NODE_ENV=development nodemon server.js",
@@ -24,7 +25,10 @@
     "config": "^4.1.1",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "luxon": "^3.7.2"
+    "handlebars": "^4.7.8",
+    "luxon": "^3.7.2",
+    "mjml": "^4.17.1",
+    "nodemailer": "^7.0.10"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

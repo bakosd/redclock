@@ -1,6 +1,6 @@
-const redmineService = require("../services/redmine.service");
+import * as redmineService from "../services/redmine.service.js";
 
-exports.createTimeEntry = async (req, res, next) => {
+const createTimeEntry = async (req, res, next) => {
     try {
         const result = await redmineService.createTimeEntry(req.body);
         res.status(result.statusCode).json(result);
@@ -9,7 +9,7 @@ exports.createTimeEntry = async (req, res, next) => {
     }
 };
 
-exports.deleteTimeEntry = async (req, res, next) => {
+const deleteTimeEntry = async (req, res, next) => {
     try {
         const result = await redmineService.deleteTimeEntry(req.body);
         res.status(result.statusCode).json(result);
@@ -18,7 +18,7 @@ exports.deleteTimeEntry = async (req, res, next) => {
     }
 };
 
-exports.updateTimeEntry = async (req, res, next) => {
+const updateTimeEntry = async (req, res, next) => {
     try {
         const result = await redmineService.updateTimeEntry(req.body);
         res.status(result.statusCode).json(result);
@@ -26,3 +26,5 @@ exports.updateTimeEntry = async (req, res, next) => {
         next(err);
     }
 }
+
+export {createTimeEntry, deleteTimeEntry, updateTimeEntry};
